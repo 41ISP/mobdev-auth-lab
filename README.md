@@ -8,13 +8,100 @@ _Апи развернуто по адресу `https://api.kitek-pg.ru/api/mark
 
 Этот проект представляет собой REST API для маркетплейса, где пользователи могут создавать карточки товаров на продажу и делать ставки на товары других пользователей.
 
-## Описание API
+## Часть 1. Сохранение токена
 
-### Аутентификация
+### Шаг 1.1. Стор пользователя
 
-API использует JWT токены для аутентификации. После регистрации или входа вы получите токен, который нужно передавать в заголовке `Authorization: Bearer <token>` для защищенных эндпоинтов.
+Создайте файл `src/store/useUserStore.js`
+
+```js
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+export const useUserStore = create()(
+    persist(
+        (set) => ({
+            session: undefined,
+            setSession: (session) => ???,
+            clearSession: () => ???,
+        }),
+        { name: 'user-storage' },
+    ),
+)
+```
+
+`persist` сохраняет состояние стора в `localStorage` под ключом `user-storage`, поэтому сессия переживает перезагрузку страницы.
+
+Вместо `???` напишите вызов `set`, который записывает переданную сессию, и вызов, который её очищает.
+
+### Шаг 1.2. Сохранение сессии при входе и регистрации
+
+Сервер возвращает при входе объект вида `{ success, token, user }`. Именно он и станет `session`.
+
+В `Login.jsx` и `Register.jsx` получите функцию стора и вызовите её после успешного запроса:
+
+```jsx
+const setSession = useUserStore((state) => state.setSession)
+
+// внутри handleSubmit, после успешного запроса:
+setSession(???)     // данные ответа сервера
+```
+
+Обратите внимание, что именно возвращает ваша функция `loginUser`: ответ axios целиком (`res`) или уже `res.data`. От этого зависит, что передавать в `setSession`.
+
+После регистрации сервер тоже возвращает токен, то есть пользователь сразу считается вошедшим.
+
+### Шаг 1.3. Проверка
+
+Выполните вход и откройте DevTools → **Application → Local Storage**. Должен быть ключ `user-storage` с `session.token` внутри. Перезагрузите страницу: данные должны сохраниться.
+
+### Шаг 1.4. Выход
+
+В `Logout.jsx` сейчас выполняется только `navigate('/')`. Перед этим необходимо очистить сессию:
+
+```jsx
+const clearSession = useUserStore((state) => ???)
+
+useEffect(() => {
+    // TODO: очистить сессию
+    navigate('/')
+}, [])
+```
+
+Проверьте: после выхода ключ `user-storage` больше не содержит `token`.
 
 ---
+
+## Часть 2. Функции запросов в `api.js`
+
+Откройте `src/api/api.js`.
+
+### Шаг 2.1. Interceptor
+
+Interceptor — функция, которая выполняется перед каждым запросом и может изменить его настройки. С его помощью токен добавляется автоматически.
+
+```js
+apiInstance.interceptors.request.use((config) => {
+    const { session } = useUserStore.???()
+
+    if (session?.???) {
+        config.headers.Authorization = `??? ${session.token}`
+    }
+
+    return config
+})
+```
+
+### Шаг 2.2. `sendItems` — создание товара
+
+По документации: метод `POST`, путь `/items`, тело `{ title, description, price, imageUrl }`.
+
+```js
+const sendItems = async (item) => {
+    const res = await api.???("???", ???)
+    return res.data
+}
+```
 
 ## Публичные эндпоинты (не требуют аутентификации)
 
