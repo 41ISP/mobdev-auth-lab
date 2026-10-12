@@ -1,8 +1,10 @@
 
+
 import { useState } from 'react'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import { Link, useNavigate } from 'react-router-dom'
+import { useUserStore } from '../store/useUserStore'
 import { api } from '../api/api'
 
 const Register = () => {
@@ -11,8 +13,10 @@ const Register = () => {
     const [password, setPassword] = useState('')
     const [password2, setPassword2] = useState('')
     const [error, setError] = useState('')
+    const [loading, setLoading] = useState(false)
 
     const navigate = useNavigate()
+    const { setSession } = useUserStore()
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -23,23 +27,13 @@ const Register = () => {
             return
         }
 
+        setLoading(true)
         try {
-            const response = await fetch('https://api.kitek-pg.ru/api/marketplace/auth/register'
-, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username,
-                    email,
-                    password,
-                }),
-            })
+            const data = await api.register(username, email, password)
 
-            const data = await response.json()
-
-            if (response.ok && data.token) {
+            if (data.token) {
+          
+                setSession({ token: data.token, user: data.user })
                 localStorage.setItem('token', data.token)
                 navigate('/')
             } else {
@@ -47,6 +41,8 @@ const Register = () => {
             }
         } catch (err) {
             setError('Ошибка соединения с сервером')
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -108,8 +104,9 @@ const Register = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
+<div 
 
-<div className="form-hint">Минимум 6 символов</div>
+lassName="form-hint">Минимум 6 символов</div>
                     </div>
 
                     <div className="form-group">
@@ -126,8 +123,8 @@ const Register = () => {
                         />
                     </div>
 
-                    <Button type="submit" className="btn-submit">
-                        Зарегистрироваться
+                    <Button type="submit" className="btn-submit" disabled={loading}>
+                        {loading ? 'Регистрация...' : 'Зарегистрироваться'}
                     </Button>
                 </form>
 
@@ -144,6 +141,9 @@ const Register = () => {
 }
 
 export default Register
+
+
+
 
 
 

@@ -1,33 +1,39 @@
+import axios from "axios"
+import { useUserStore } from "../store/useUserStore"
+
+const apiInstance = axios.create({
+    baseURL: "https://ktkv.dev/api/feedback/"
+,
+    headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+    },
+})
+
+apiInstance.interceptors.request.use((config) => {
+    const { session } = useUserStore.getState()
+
+    if (session?.token) {
+        config.headers.Authorization = `Bearer ${session.token}`
+    }
+
+    return config
+})
+
+const registerUser = async (user) => {
+    const res = await apiInstance.post
+("/auth/register", user)
+    return res
+}
+
+const loginUser = async (user) => {
+    const res = await apiInstance.post
+("/auth/login", user)
+    return res
+}
 
 export const api = {
-  register: async (username, email, password) => {
-    const res = await fetch('https://api.kitek-pg.ru/api/marketplace/api/auth/register'
-, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email, password }),
-    });
-    return res.json();
-  },
-  login: async (username, password) => {
-    const res = await fetch('https://api.kitek-pg.ru/api/marketplace/api/auth/login'
-, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    return res.json();
-  },
-  getMe: async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return null;
-
-    const res = await fetch('https://api.kitek-pg.ru/api/marketplace/api/auth/me'
-, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    return res.json();
-  },
-};
+    registerUser,
+    loginUser,
+    authMe,
+}
