@@ -1,49 +1,8 @@
 # Маркетплейс
 
-## Frontend
-
-## Backend
-
 _Апи развернуто по адресу `https://api.kitek-pg.ru/api/marketplace/`_
 
 Этот проект представляет собой REST API для маркетплейса, где пользователи могут создавать карточки товаров на продажу и делать ставки на товары других пользователей.
-
-## Часть 0. Подготовка
-
-### 0.1. Авторизация по токену
-
-Сервер не запоминает клиента между запросами. После входа или регистрации он возвращает **JWT-токен**. Клиент сохраняет его и передаёт в каждом защищённом запросе в заголовке:
-
-```
-Authorization: Bearer <token>
-```
-
-Если заголовка нет, сервер отвечает `401`. Если токен недействителен, то `403`.
-
-### 0.2. Как это устроено в проекте
-
-```
-Компонент  →  api/api.js (axios)  →  Сервер
-                   │
-                   └─ interceptor берёт token из useUserStore
-                                          │
-                                   localStorage (через persist)
-```
-
-| Файл | Назначение |
-|---|---|
-| `src/api/api.js` | Все запросы к серверу. Адрес и добавление токена находятся только здесь. |
-| `src/store/useUserStore.js` | Хранит `session` (ответ сервера при входе, в нём `token` и `user`). |
-| `src/store/useItemStore.js` | Хранит список товаров и умеет его загружать. |
-
-### 0.3. Установка и структура
-
-**Что нужно сделать:**
-
-1. Установите зависимости: `npm i axios zustand`.
-2. Создайте папки `src/api` и `src/store`.
-
----
 
 ## Часть 1. Хранилища
 
@@ -57,22 +16,6 @@ Authorization: Bearer <token>
 4. Добавьте функцию `clearSession`, которая очищает сессию (возвращает `undefined`).
 5. Подключите `persist` с именем `user-storage`, чтобы сессия сохранялась в `localStorage` и переживала перезагрузку страницы.
 
-```js
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-
-export const useUserStore = create()(
-    persist(
-        (set) => ({
-            session: undefined,
-            setSession: (session) => ???,
-            clearSession: () => ???,
-        }),
-        { name: '???' },
-    ),
-)
-```
-
 ### 1.2. `useItemStore`: список товаров
 
 **Что нужно сделать:**
@@ -81,23 +24,6 @@ export const useUserStore = create()(
 2. Добавьте поле `items` (пустой массив).
 3. Добавьте асинхронную функцию `getItems`: она вызывает `api.getItems()` и записывает результат в `items`.
 4. Ошибку внутри `getItems` выведите в консоль через `console.error`.
-
-```js
-import { create } from 'zustand'
-import { api } from '../api/api'
-
-export const useItemStore = create((set) => ({
-    items: [],
-    getItems: async () => {
-        try {
-            const items = await api.???()
-            set({ ??? })
-        } catch (error) {
-            console.error(error)
-        }
-    },
-}))
-```
 
 ---
 
@@ -152,13 +78,6 @@ apiInstance.interceptors.request.use((config) => {
 | `getItemBids(id)` | `/items/${id}/bids` | не нужен |
 | `getMyBids()` | `/bids/my` | нужен (добавляется interceptor) |
 
-```js
-const getItems = async () => {
-    const res = await apiInstance.???("/items")
-    return res.data
-}
-```
-
 ### 2.5. `sendItems`: создание товара
 
 По документации: метод `POST`, путь `/items`, тело `{ title, description, price, imageUrl }`, нужен токен.
@@ -168,13 +87,6 @@ const getItems = async () => {
 1. Напишите функцию `sendItems`, которая принимает объект `item`.
 2. Отправьте `POST`-запрос на `/items` и передайте `item` вторым аргументом (это тело запроса). Сериализовать в JSON вручную не нужно, axios делает это сам.
 3. Верните из функции `res.data`.
-
-```js
-const sendItems = async (item) => {
-    const res = await apiInstance.???("???", ???)
-    return res.data
-}
-```
 
 ### 2.6. `deleteItems`: удаление товара
 
@@ -197,13 +109,6 @@ const sendItems = async (item) => {
 3. В **тело** запроса передайте только `{ amount }`, без `id`.
 4. Верните из функции `res.data`.
 
-```js
-const createBid = async ({ id, amount }) => {
-    const res = await apiInstance.post(`/items/${???}/bids`, { ??? })
-    return res.data
-}
-```
-
 ### 2.8. Экспорт
 
 **Что нужно сделать:** добавьте все функции в объект `api` в конце файла: `registerUser`, `loginUser`, `getItems`, `getStats`, `sendItems`, `deleteItems`, `createBid`, `getItemBids`, `getMyBids`.
@@ -224,29 +129,6 @@ const createBid = async ({ id, amount }) => {
 4. Вызовите `api.loginUser(user)`, результат передайте в `setSession`.
 5. После успеха перейдите на главную страницу.
 6. В разметке выведите ошибку `{error && <div className="alert alert-error active">{error}</div>}`.
-
-```jsx
-const navigate = useNavigate()
-const setSession = useUserStore((state) => ???)
-
-const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError("")
-
-    const user = {
-        username: e.target.username.value,
-        password: ???,
-    }
-
-    try {
-        const data = await api.???(user)
-        ???(data)
-        navigate("???")
-    } catch (err) {
-        setError(???(err))
-    }
-}
-```
 
 ### 3.2. Регистрация (`Register.jsx`)
 
@@ -306,15 +188,6 @@ if (???) user.email = e.target.email.value
 1. Вместо `const items = []` получите `items` и `getItems` из `useItemStore`.
 2. Вызовите `getItems()` в `useEffect` при открытии страницы.
 
-```jsx
-const items = useItemStore((state) => state.???)
-const getItems = useItemStore((state) => state.???)
-
-useEffect(() => {
-    ???()
-}, [getItems])
-```
-
 ### 4.2. Статистика
 
 **Что нужно сделать:**
@@ -324,21 +197,6 @@ useEffect(() => {
 3. Выведите в блоках статистики: `totalItems` («Товаров»), `totalBids` («Ставок»), `activeItems` («Активных»), `averageItemPrice` («Средняя цена»). Пока статистика не загружена (`stats` равно `null`), показывайте `0`: используйте `stats?.поле ?? 0`.
 
 Колбэк `useEffect` нельзя делать `async`, поэтому запрос выносится во вложенную асинхронную функцию, которая вызывается ниже:
-
-```jsx
-useEffect(() => {
-    const loadStats = async () => {
-        try {
-            // TODO: загрузить статистику и записать в состояние
-        } catch (error) {
-            console.error(error)
-        }
-    }
-
-    getItems()
-    loadStats()
-}, [getItems])
-```
 
 ### 4.3. Переход на страницу товара
 
@@ -374,29 +232,6 @@ useEffect(() => {
 6. После успеха обновите список товаров в сторе и перейдите на главную.
 7. В `catch` запишите текст ошибки через `getErrorMessage`.
 8. Выведите ошибку над формой блоком `alert alert-error active`.
-
-```jsx
-const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-
-    const form = e.target.elements
-    const item = {
-        title: form.title.value,
-        description: form.description.value,
-        price: ???,
-    }
-    if (???) item.imageUrl = form.imageUrl.value
-
-    try {
-        await api.???(item)
-        await ???()
-        navigate('/')
-    } catch (err) {
-        setError(???(err))
-    }
-}
-```
 
 ---
 
